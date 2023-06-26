@@ -4,6 +4,8 @@ jspm_packages
 .npm
 /.*
 /*.*
+!/*.js
+!/types.d.ts
 /test
 /src
 /coverage
