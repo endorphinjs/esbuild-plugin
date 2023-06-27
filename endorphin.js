@@ -257,12 +257,12 @@ function sourceMapToDataURL(sm) {
  * @returns {Promise<ProcessedStylesheet>}
  */
 async function processStylesheet(source, options) {
-    let code = '';
+    let code = source;
     let map = null;
     let deps = [];
 
     if (options.type === 'scss') {
-        const compiled = await sass.compileStringAsync(source, {
+        const compiled = await sass.compileStringAsync(code, {
             url: new URL(`file://${options.file}`),
             sourceMap: options.sourceMap
         });
