@@ -49,7 +49,7 @@ interface ProcessStylesheetOptions {
 }
 
 interface ComponentResource {
-    url: string;
+    url?: string;
     content?: string;
     type?: string;
 }

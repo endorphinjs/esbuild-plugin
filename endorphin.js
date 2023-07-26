@@ -192,7 +192,7 @@ export default function createPlugin(options = {}) {
                 const cacheKey = await getCacheKey(args.path);
 
                 if (!compiledTemplate || !await isValidEntry(compiledTemplate, cacheKey)) {
-                    compiledTemplate = await compileTemplate(build, args.path, cacheKey, options);
+                    compiledTemplate = await compileTemplate(args.path, cacheKey, options);
                     templateCache.set(args.path, compiledTemplate);
                 }
 
@@ -365,29 +365,15 @@ function getLines(text) {
 }
 
 /**
- * @param {import('esbuild').PluginBuild} build
- * @param {string} filePath Path to main component template file
  * @param {ENDSourceNode} node
- * @returns {Promise<ComponentResource>}
+ * @returns {ComponentResource}
  */
-async function getComponentResource(build, filePath, node) {
-    /** @type {ComponentResource} */
-    const res = {
-        url: filePath,
+function getComponentResource(node) {
+    return {
+        url: node.url,
         content: node.content,
         type: node.mime,
     };
-
-    if (node.url) {
-        // External source
-        const resolved = await build.resolve(node.url, {
-            kind: 'import-statement',
-            resolveDir: path.dirname(filePath)
-        });
-        res.url = resolved.path;
-    }
-
-    return res;
 }
 
 /**
@@ -438,24 +424,17 @@ function createMessage(message, pos, code, file) {
 }
 
 /**
- * @param {import('esbuild').PluginBuild} build
  * @param {string} filePath
  * @param {string | number} cacheKey
  * @param {EndorphinPluginOptions} options
  * @returns {Promise<TemplateCacheEntry>}
  */
-async function compileTemplate(build, filePath, cacheKey, options) {
+async function compileTemplate(filePath, cacheKey, options) {
     const root = process.cwd();
     const source = await fs.readFile(filePath, 'utf8');
 
     // const sourceMap = !!build.initialOptions.sourcemap;
     const normalizedFilename = normalize(filePath, root);
-
-    /** @type {ComponentResource[]} */
-    const styles = [];
-
-    /** @type {ComponentResource[]} */
-    const scripts = [];
 
     /** @type {import('esbuild').PartialMessage[]} */
     const warnings = [];
@@ -478,15 +457,8 @@ async function compileTemplate(build, filePath, cacheKey, options) {
 
 
     const parsed = parse(source, filePath, compileOpt);
-
-    // Store resolved component references
-    for (const node of parsed.ast.scripts) {
-        scripts.push(await getComponentResource(build, filePath, node));
-    }
-
-    for (const node of parsed.ast.stylesheets) {
-        styles.push(await getComponentResource(build, filePath, node));
-    }
+    const styles = parsed.ast.stylesheets.map(node => getComponentResource(node));
+    const scripts = parsed.ast.scripts.map(node => getComponentResource(node));
 
     // Emit chunks for inline scripts
     scripts.forEach((res, i) => {
